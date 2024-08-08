@@ -1,54 +1,87 @@
-import DeployButton from "../components/DeployButton";
-import AuthButton from "../components/AuthButton";
+import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import ConnectSupabaseSteps from "@/components/tutorial/ConnectSupabaseSteps";
-import SignUpUserSteps from "@/components/tutorial/SignUpUserSteps";
-import Header from "@/components/Header";
+import { fetchPosts } from "@/app/components/posts/actions";
+import Link from "next/link";
+import Posts from "@/app/components/posts/posts";
+import CreatePost from "@/app/components/posts/createPost";
+import MoreInfo from "@/app/components/landing/moreInfo";
 
 export default async function Index() {
-  const canInitSupabaseClient = () => {
-    // This function is just for the interactive tutorial.
-    // Feel free to remove it once you have Supabase connected.
-    try {
-      createClient();
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
+  const supabase = createClient();
 
-  const isSupabaseConnected = canInitSupabaseClient();
+  const [userResponse, sessionResponse] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession()
+  ]);
+
+  const user = userResponse.data.user;
+  const session = sessionResponse.data.session;
+
+  var user_profile = null;
+
+  if (user) {
+    const { data: profile, error: profileError } = await supabase
+      .from("user")
+      .select()
+      .eq("id", user.id)
+      .single();
+
+    user_profile = profile;
+
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      return redirect(
+        "/login?message=Error fetching profile, please log back in"
+      );
+    }
+
+    const isProfileComplete = profile && profile.username;
+
+    if (!isProfileComplete) {
+      return redirect("/create");
+    }
+  }
+
+  const {
+    posts: initialPosts,
+    nextCursor: initialNextCursor,
+    firstCursor: initialFirstCursor,
+  } = await fetchPosts({ view: "feed" });
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-20 items-center">
-      <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-        <div className="w-full max-w-4xl flex justify-between items-center p-3 text-sm">
-          <DeployButton />
-          {isSupabaseConnected && <AuthButton />}
+    <div className="w-full sm:w-96 place-items-center">
+      {session ? null : (
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-row justify-between">
+            <Link href="/" className="text-slate-400">
+              myfriendsare.online
+            </Link>
+            <Link
+              href="/login"
+              className="hover:text-decoration-line hover:underline hover:decoration-2 hover:underline-offset-4"
+            >
+              Login
+            </Link>
+          </div>
+          <div className="w-full sm:w-56 flex flex-col gap-4">
+            <span>
+              is a place where you can post one status update a day for your
+              friends to see
+            </span>
+            <span>and have a small space to yourself</span>
+          </div>
+          <MoreInfo />
         </div>
-      </nav>
-
-      <div className="flex-1 flex flex-col gap-20 max-w-4xl px-3">
-        <Header />
-        <main className="flex-1 flex flex-col gap-6">
-          <h2 className="font-bold text-4xl mb-4">Next steps</h2>
-          {isSupabaseConnected ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-        </main>
-      </div>
-
-      <footer className="w-full border-t border-t-foreground/10 p-8 flex justify-center text-center text-xs">
-        <p>
-          Powered by{" "}
-          <a
-            href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-            target="_blank"
-            className="font-bold hover:underline"
-            rel="noreferrer"
-          >
-            Supabase
-          </a>
-        </p>
-      </footer>
+      )}
+      {session ? (
+        <Posts
+          username={user_profile.username}
+          initialPosts={initialPosts}
+          initialNextCursor={initialNextCursor}
+          initialFirstCursor={initialFirstCursor}
+          createPostComponent={<CreatePost />}
+        />
+      ) : null}
     </div>
   );
 }

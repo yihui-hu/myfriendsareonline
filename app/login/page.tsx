@@ -1,119 +1,111 @@
+"use client";
+
 import Link from "next/link";
-import { headers } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
-import { SubmitButton } from "./submit-button";
+import { useState } from "react";
+import { signIn, signUp } from "@/app/auth/actions";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from 'zod';
 
-export default function Login({
-  searchParams,
-}: {
-  searchParams: { message: string };
-}) {
-  const signIn = async (formData: FormData) => {
-    "use server";
+// Minimum 8 characters, at least one uppercase letter, one lowercase letter, one number and one special character
+const passwordValidation = new RegExp(
+  /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/
+);
 
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const supabase = createClient();
+type AuthInputs = {
+  email: string;
+  password: string;
+}
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+const authSchema = z.object({
+  email: z
+    .string()
+    .min(1, { message: "Email is required" })
+    .email({ message: "Invalid email" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must have at least 8 characters" })
+    // .regex(passwordValidation, {
+    //   message:
+    //     "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+    // }),
+});
 
-    if (error) {
-      return redirect("/login?message=Could not authenticate user");
+export default function Login() {
+  const [loggingIn, setLoggingIn] = useState<boolean>(false);
+  
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<AuthInputs>({
+    resolver: zodResolver(authSchema)
+  })
+
+  const processFormSignIn: SubmitHandler<AuthInputs> = async data => {
+    try {
+      setLoggingIn(true);
+      const formData = new FormData();
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+      await signIn(formData);
+    } catch (error) {
+      console.log("Something went wrong: ", error);
+    } finally {
+      setLoggingIn(false);
+      reset();
     }
+  }
 
-    return redirect("/protected");
-  };
-
-  const signUp = async (formData: FormData) => {
-    "use server";
-
-    const origin = headers().get("origin");
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      return redirect("/login?message=Could not authenticate user");
+    const processFormSignUp: SubmitHandler<AuthInputs> = async data => {
+    try {
+      const formData = new FormData();
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+      await signUp(formData);
+    } catch (error) {
+      console.log("Something went wrong: ", error);
+    } finally {
+      reset();
     }
-
-    return redirect("/login?message=Check email to continue sign in process");
-  };
+  }
 
   return (
-    <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
+    <div className="w-full sm:w-96 flex flex-col gap-4">
       <Link
         href="/"
-        className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
+        className="hover:text-decoration-line hover:underline hover:decoration-2 hover:underline-offset-4"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>{" "}
-        Back
+        back
       </Link>
-
-      <form className="flex-1 flex flex-col w-full justify-center gap-2 text-foreground">
-        <label className="text-md" htmlFor="email">
-          Email
-        </label>
+      <form className="flex flex-col gap-4">
+        <label>Email</label>
         <input
-          className="rounded-md px-4 py-2 bg-inherit border mb-6"
-          name="email"
-          placeholder="you@example.com"
-          required
+          placeholder="your@email.com"
+          className="w-full px-2 py-1 bg-slate-100"
+          {...register("email")}
         />
-        <label className="text-md" htmlFor="password">
-          Password
-        </label>
+        <label htmlFor="password">Password</label>
         <input
-          className="rounded-md px-4 py-2 bg-inherit border mb-6"
           type="password"
-          name="password"
           placeholder="••••••••"
-          required
+          className="w-full px-2 py-1 bg-slate-100"
+          {...register("password")}
         />
-        <SubmitButton
-          formAction={signIn}
-          className="bg-green-700 rounded-md px-4 py-2 text-foreground mb-2"
-          pendingText="Signing In..."
+        <button
+          onClick={handleSubmit(processFormSignIn)}
+          className="px-4 py-1 bg-slate-800 text-sky-50"
         >
-          Sign In
-        </SubmitButton>
-        <SubmitButton
-          formAction={signUp}
-          className="border border-foreground/20 rounded-md px-4 py-2 text-foreground mb-2"
-          pendingText="Signing Up..."
+          {isSubmitting && loggingIn ? "Signing in..." : "Sign in"}
+        </button>
+        <button
+          onClick={handleSubmit(processFormSignUp)}
+          className="px-4 py-1 bg-slate-400 text-sky-50"
         >
-          Sign Up
-        </SubmitButton>
-        {searchParams?.message && (
-          <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-            {searchParams.message}
-          </p>
-        )}
+           {isSubmitting && !loggingIn ? "Signing up..." : "Sign up"}
+        </button>
       </form>
     </div>
   );
-}
+};
