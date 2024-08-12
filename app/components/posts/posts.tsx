@@ -11,6 +11,7 @@ export type ViewType = "feed" | "friends" | "profile";
 
 type PostsProps = {
   username: string;
+  initialView: ViewType;
   initialPosts: any[]; // TODO: Stricter typing
   initialNextCursor: string;
   initialFirstCursor: string;
@@ -18,6 +19,7 @@ type PostsProps = {
 
 export default function Posts({
   username,
+  initialView,
   initialPosts,
   initialNextCursor,
   initialFirstCursor,
@@ -33,7 +35,7 @@ export default function Posts({
   const [loading, setLoading] = useState<boolean>(false);
 
   // For switching between "feed" and "friends" view
-  const [view, setView] = useState<ViewType>(localStorage.getItem("view") as ViewType ?? "feed");
+  const [view, setView] = useState<ViewType>(initialView);
 
   const supabase = createClient();
 
@@ -98,8 +100,6 @@ export default function Posts({
     if (view == newView) {
       return;
     } else {
-      localStorage.setItem("view", newView as string);
-
       setLoadingNewView(true);
       try {
         setView(newView);
@@ -182,7 +182,7 @@ export default function Posts({
   }, [nextCursor, loading])
 
   return (
-    <div className="w-full sm:w-96 relative flex flex-col gap-4">
+    <div className="w-full sm:w-96 relative flex flex-col gap-4 mx-auto">
       <PostsHeader />
       <CreatePost />
       <div className="flex flex-col gap-3">

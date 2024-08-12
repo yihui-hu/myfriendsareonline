@@ -40,7 +40,7 @@ export default async function Profile({ params }: { params: { profile: string } 
   const alrFriends = friends ? (friends?.length === 0 ? false : true) : false;
 
   return (
-    <div className="w-full sm:w-96 flex flex-col gap-4">
+    <div className="w-full sm:w-96 flex flex-col gap-4 mt-0 sm:mt-12 mx-auto">
       <div className="flex flex-row justify-between">
         <Link
           href="/"
@@ -48,13 +48,22 @@ export default async function Profile({ params }: { params: { profile: string } 
         >
           back
         </Link>
-        {user?.id == userData.id ? (
-          <form action={signOut}>
-            <button className="hover:text-decoration-line hover:underline hover:decoration-2 hover:underline-offset-4">
-              Logout
-            </button>
-          </form>
-        ) : null}
+        <div className="flex flex-row gap-8">
+          {user?.id == userData.id ? (
+            <Link href={`/${userData.username}/edit`}>
+              <button className="hover:text-decoration-line hover:underline hover:decoration-2 hover:underline-offset-4">
+                Edit
+              </button>
+            </Link>
+          ) : null}
+          {user?.id ? (
+            <form action={signOut}>
+              <button className="hover:text-decoration-line hover:underline hover:decoration-2 hover:underline-offset-4">
+                Logout
+              </button>
+            </form>
+          ) : null}
+        </div>
       </div>
       <div className="flex flex-col gap-2 self-start w-full">
         <div className="flex flex-row justify-between">

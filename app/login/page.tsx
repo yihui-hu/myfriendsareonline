@@ -72,7 +72,7 @@ export default function Login() {
   }
 
   return (
-    <div className="w-full sm:w-96 flex flex-col gap-4">
+    <div className="w-full sm:w-96 flex flex-col gap-4 mt-0 sm:mt-12 mx-auto">
       <Link
         href="/"
         className="hover:text-decoration-line hover:underline hover:decoration-2 hover:underline-offset-4"

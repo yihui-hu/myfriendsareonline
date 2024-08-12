@@ -90,7 +90,8 @@ async function fetchFriendPosts({ cursor, latest }: FetchOptions) {
     throw new Error(friendsError.message);
   }
 
-  const friendIds = [user.id, ...friends.map(friend => friend.friend_id)];
+  // const friendIds = [user.id, ...friends.map(friend => friend.friend_id)];
+  const friendIds = friends.map(friend => friend.friend_id);
 
   let query = supabase
     .from('post')

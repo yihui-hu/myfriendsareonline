@@ -17,7 +17,7 @@ export default async function Index() {
   const session = sessionResponse.data.session;
 
   var user_profile = null;
-  var initialPosts = []
+  var initialPosts: any[] = []
   var initialNextCursor = ""
   var initialFirstCursor = ""
 
@@ -55,7 +55,7 @@ export default async function Index() {
   }
 
   return (
-    <div className="w-full sm:w-96 place-items-center">
+    <div className="w-full sm:w-96 mt-0 sm:mt-12 mx-auto">
       {session ? null : (
         <div className="flex flex-col gap-8">
           <div className="flex flex-row justify-between">
@@ -82,6 +82,7 @@ export default async function Index() {
       {session ? (
         <Posts
           username={user_profile.username}
+          initialView={user_profile.view ?? "feed"}
           initialPosts={initialPosts}
           initialNextCursor={initialNextCursor}
           initialFirstCursor={initialFirstCursor}
