@@ -15,47 +15,63 @@ const postSchema = z.object({
     .max(280, { message: "Post must be <= 280 characters"})
 })
 
-const CreatePost: React.FC = () => {
+export default function CreatePost() {
   const {
     register,
     handleSubmit,
     reset,
     formState: { isSubmitting, isValid },
   } = useForm<PostInputs>({
-    resolver: zodResolver(postSchema)
-  })
+    resolver: zodResolver(postSchema),
+  });
 
-  const processForm: SubmitHandler<PostInputs> = async data => {
+  const processForm: SubmitHandler<PostInputs> = async (data) => {
+    // TODO: Replace with actual posts
+    // const newOptimisticPost = {
+    //   id: randomUUID,
+    //   user: {
+    //     name: "yihui",
+    //     username: "yihui"
+    //   },
+    //   content: data.post,
+    //   created_at: Date.now()
+    // }
+    // addOptimisticPost(newOptimisticPost);
+
     try {
-      const formData = new FormData;
-      formData.append("post", data.post)
-      await createPost(formData)
+      const formData = new FormData();
+      formData.append("post", data.post);
+      await createPost(formData);
     } catch (error) {
       console.log("Something went wrong: ", error);
     } finally {
       reset();
     }
-  }
-  
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <form
-        className="flex flex-row gap-2"
+        className="flex flex-col gap-2"
         onSubmit={handleSubmit(processForm)}
       >
-        <input
-          className="w-full px-2 py-1 bg-slate-100"
+        <textarea
+          className="w-full px-2 py-1 bg-slate-100 resize-none"
           placeholder="Share an update..."
+          autoComplete="off"
+          rows={4}
           {...register("post")}
         />
-        {isValid ? (
-          <button type="submit" className="px-4 py-1 bg-slate-800 text-sky-50">
-            {isSubmitting ? "Posting..." : "Post"}
-          </button>
-        ) : null}
+        <button
+          type="submit"
+          className={`px-4 py-1 bg-slate-800 text-sky-50 ${
+            isSubmitting ? "opacity-50" : "opacity-100"
+          }`}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Posting..." : "Post"}
+        </button>
       </form>
     </div>
   );
 }
-
-export default CreatePost;

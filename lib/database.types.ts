@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      friend: {
+        Row: {
+          friend_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          friend_id?: string
+          id?: string
+          user_id?: string
+        }
+        Update: {
+          friend_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friend_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post: {
         Row: {
           content: string
@@ -49,6 +82,7 @@ export type Database = {
           name: string | null
           url: string | null
           username: string | null
+          view: string
         }
         Insert: {
           bio?: string | null
@@ -60,6 +94,7 @@ export type Database = {
           name?: string | null
           url?: string | null
           username?: string | null
+          view?: string
         }
         Update: {
           bio?: string | null
@@ -71,6 +106,7 @@ export type Database = {
           name?: string | null
           url?: string | null
           username?: string | null
+          view?: string
         }
         Relationships: [
           {

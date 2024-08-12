@@ -1,19 +1,19 @@
 "use client";
 
 import { createClient } from "@/utils/supabase/client";
-import { useState, useEffect } from "react";
-import { fetchPosts } from "@/app/components/posts/actions";
+import { useState, useEffect, useCallback } from "react";
+import { fetchPosts, setViewInDatabase } from "@/app/components/posts/actions";
 import Link from "next/link";
-import debounce from "debounce";
 import PostsList from "./postsList";
+import CreatePost from "./createPost";
 
-type ViewType = "feed" | "friends";
+export type ViewType = "feed" | "friends" | "profile";
+
 type PostsProps = {
   username: string;
-  initialPosts: any[]; // TODO: Better typing
+  initialPosts: any[]; // TODO: Stricter typing
   initialNextCursor: string;
   initialFirstCursor: string;
-  createPostComponent: JSX.Element;
 }
 
 export default function Posts({
@@ -21,7 +21,6 @@ export default function Posts({
   initialPosts,
   initialNextCursor,
   initialFirstCursor,
-  createPostComponent: CreatePost,
 }: PostsProps) {
   // States for fetching posts
   const [posts, setPosts] = useState(initialPosts);
@@ -34,7 +33,7 @@ export default function Posts({
   const [loading, setLoading] = useState<boolean>(false);
 
   // For switching between "feed" and "friends" view
-  const [view, setView] = useState<ViewType>("feed");
+  const [view, setView] = useState<ViewType>(localStorage.getItem("view") as ViewType ?? "feed");
 
   const supabase = createClient();
 
@@ -62,8 +61,8 @@ export default function Posts({
     };
   }, [firstCursor, view]); // firstCursor and view is required as a dependency because the useEffect closes over the initial value of firstCursor used in loadNewPosts
 
-  // For fetching new post(s) via realtime subscription, debounced with 1000ms
-  const loadNewPosts = debounce(async (view) => {
+  // For fetching new post(s) via realtime subscription
+  const loadNewPosts = async (view: ViewType) => {
     try {
       if (firstCursor) {
         const { posts: newPosts, firstCursor: newFirstCursor } =
@@ -74,12 +73,11 @@ export default function Posts({
     } catch (error) {
       console.error("Error fetching latest post: ", error);
     }
-  }, 1000);
+  }
 
   // For fetching more posts via read cursor
   const loadPosts = async () => {
     setLoading(true);
-
     try {
       const { posts: newPosts, nextCursor: newNextCursor } = await fetchPosts({
         view,
@@ -100,8 +98,9 @@ export default function Posts({
     if (view == newView) {
       return;
     } else {
-      setLoadingNewView(true);
+      localStorage.setItem("view", newView as string);
 
+      setLoadingNewView(true);
       try {
         setView(newView);
         setNextCursor(undefined);
@@ -111,7 +110,7 @@ export default function Posts({
           posts: newPosts,
           nextCursor: newNextCursor,
           firstCursor: newFirstCursor,
-        } = await fetchPosts({view: newView });
+        } = await fetchPosts({ view: newView });
 
         setPosts(newPosts);
         setNextCursor(newNextCursor);
@@ -120,42 +119,56 @@ export default function Posts({
         console.error("Error fetching new view: ", error)
       } finally {
         setLoadingNewView(false);
+        setViewInDatabase({ username: username, newView: newView })
       }
     }
   }
 
-  return (
-    <div className="w-full sm:w-96 relative flex flex-col gap-4">
+  function PostsHeader() {
+    function FeedViewButton({ newView }: { newView: string }) {
+      return (
+        <button
+          onClick={() => handleViewChange(newView as ViewType)}
+          className={`${
+            view === newView
+              ? "text-decoration-line: underline decoration-2 underline-offset-4"
+              : ""
+          }`}
+        >
+          {newView}
+        </button>
+      );
+    }
+
+    return (
       <div className="flex flex-row justify-between">
         <div className="flex flex-row gap-4">
-          <button
-            onClick={() => handleViewChange("feed")}
-            className={`${
-              view === "feed"
-                ? "text-decoration-line: underline decoration-2 underline-offset-4"
-                : ""
-            }`}
-          >
-            Feed
-          </button>
-          <button
-            onClick={() => handleViewChange("friends")}
-            className={`${
-              view === "friends"
-                ? "text-decoration-line: underline decoration-2 underline-offset-4"
-                : ""
-            }`}
-          >
-            Friends
-          </button>
+          <FeedViewButton newView="feed" />
+          <FeedViewButton newView="friends" />
         </div>
         <Link href={`/${username}`}>@{username}</Link>
       </div>
-      {CreatePost}
-      <div className="flex flex-col gap-3">
-        {loadingNewView ? <p>Loading...</p> : <PostsList posts={posts} />}
-      </div>
-      {nextCursor && (
+    );
+  }
+
+  // TODO: Check if still works, or if need to wrap in a callback
+  function NewPostsIndicator() {
+    return newPostsIndicator ? (
+      <button
+        className="sticky bottom-4 bg-slate-50 m-auto px-4 py-2 rounded-full cursor-pointer shadow-sm shadow-slate-200"
+        onClick={() => {
+          window.scrollTo({ top: 0, behavior: "instant" });
+          setNewPostsIndicator(false);
+        }}
+      >
+        New post!
+      </button>
+    ) : null;
+  }
+
+  const LoadMorePostsButton = useCallback(() => {
+    return (
+      nextCursor && (
         <button
           onClick={() => {
             loadPosts();
@@ -164,18 +177,19 @@ export default function Posts({
         >
           {loading ? "Loading..." : "Load more"}
         </button>
-      )}
-      {newPostsIndicator ? (
-        <button
-          className="sticky bottom-4 bg-slate-50 m-auto px-4 py-2 rounded-full cursor-pointer shadow-sm shadow-slate-200"
-          onClick={() => {
-            window.scrollTo({ top: 0, behavior: "instant" });
-            setNewPostsIndicator(false);
-          }}
-        >
-          New post!
-        </button>
-      ) : null}
+      )
+    );
+  }, [nextCursor, loading])
+
+  return (
+    <div className="w-full sm:w-96 relative flex flex-col gap-4">
+      <PostsHeader />
+      <CreatePost />
+      <div className="flex flex-col gap-3">
+        {loadingNewView ? <p>Loading...</p> : <PostsList posts={posts} view={view} />}
+      </div>
+      <LoadMorePostsButton />
+      <NewPostsIndicator />
     </div>
   );
 }

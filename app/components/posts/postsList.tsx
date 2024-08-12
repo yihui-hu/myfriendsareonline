@@ -1,11 +1,28 @@
-import { formatDistanceToNow } from "date-fns";
+"use client";
+
+import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
+import { useState } from "react";
+import { ViewType } from "./posts";
+// import { useOptimistic } from "react";
 
 type PostsListProps = {
+  view: ViewType;
   posts: any[]; // TODO: Better typing
 }
 
-export default function PostsList({ posts }: PostsListProps) {
+export default function PostsList({ view, posts }: PostsListProps) {
+  const [hoveredPostId, setHoveredPostId] = useState<string | null>(null);
+    // const [optimisticPosts, addOptimisticPost] = 
+    //   useOptimistic(
+    //     posts,
+    //     (currentOptimisticPosts, newPost) => {
+    //       let newOptimisticPosts = [newPost, ...currentOptimisticPosts];
+    //       console.log(newOptimisticPosts);
+    //       return newOptimisticPosts;
+    //     }
+    //   )
+
   return posts.length > 0 ? (
     posts.map((post: any) => (
       <div key={post.id} className="w-full flex flex-col gap-2">
@@ -18,18 +35,28 @@ export default function PostsList({ posts }: PostsListProps) {
           </Link>
           <p
             suppressHydrationWarning
-            className="font-sans text-xs text-slate-400"
+            className="font-sans text-xs text-slate-400 select-none"
+            onMouseEnter={() => setHoveredPostId(post.id)}
+            onMouseLeave={() => setHoveredPostId(null)}
           >
-            {formatDistanceToNow(new Date(post.created_at), {
-              addSuffix: true,
-            })}
+            {hoveredPostId === post.id
+              ? format(new Date(post.created_at), "PPp")
+              : formatDistanceToNow(new Date(post.created_at), {
+                  addSuffix: true,
+                })}
           </p>
         </div>
-        <p className="text-wrap break-words">{post.content}</p>
+        <p className="text-wrap break-words whitespace-pre-line">
+          {post.content}
+        </p>
         <hr />
       </div>
     ))
   ) : (
-    <p>No posts to show.</p>
+    <p>
+      {view === "friends"
+        ? "No posts – befriend someone to see their posts."
+        : "No posts to show."}
+    </p>
   );
 }

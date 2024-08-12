@@ -3,7 +3,6 @@ import { createClient } from "@/utils/supabase/server";
 import { fetchPosts } from "@/app/components/posts/actions";
 import Link from "next/link";
 import Posts from "@/app/components/posts/posts";
-import CreatePost from "@/app/components/posts/createPost";
 import MoreInfo from "@/app/components/landing/moreInfo";
 
 export default async function Index() {
@@ -18,6 +17,9 @@ export default async function Index() {
   const session = sessionResponse.data.session;
 
   var user_profile = null;
+  var initialPosts = []
+  var initialNextCursor = ""
+  var initialFirstCursor = ""
 
   if (user) {
     const { data: profile, error: profileError } = await supabase
@@ -40,13 +42,17 @@ export default async function Index() {
     if (!isProfileComplete) {
       return redirect("/create");
     }
-  }
+  
+    const {
+      posts,
+      nextCursor,
+      firstCursor
+    } = await fetchPosts({ view: user_profile.view });
 
-  const {
-    posts: initialPosts,
-    nextCursor: initialNextCursor,
-    firstCursor: initialFirstCursor,
-  } = await fetchPosts({ view: "feed" });
+    initialPosts = posts;
+    initialNextCursor = nextCursor;
+    initialFirstCursor = firstCursor;
+  }
 
   return (
     <div className="w-full sm:w-96 place-items-center">
@@ -79,7 +85,6 @@ export default async function Index() {
           initialPosts={initialPosts}
           initialNextCursor={initialNextCursor}
           initialFirstCursor={initialFirstCursor}
-          createPostComponent={<CreatePost />}
         />
       ) : null}
     </div>

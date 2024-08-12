@@ -83,6 +83,7 @@ export default function Login() {
         <label>Email</label>
         <input
           placeholder="your@email.com"
+          autoComplete="username"
           className="w-full px-2 py-1 bg-slate-100"
           {...register("email")}
         />
@@ -90,6 +91,7 @@ export default function Login() {
         <input
           type="password"
           placeholder="••••••••"
+          autoComplete="current-password"
           className="w-full px-2 py-1 bg-slate-100"
           {...register("password")}
         />
